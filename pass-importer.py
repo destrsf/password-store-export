@@ -34,7 +34,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-DEFAULT_TIMER_STATE = False
 SUPPORTED_ACTIONS = ['import', 'export']
 IGNORED_DIRS = ['.git']
 
@@ -51,10 +50,6 @@ parser.add_option('-a', '--action',
 (options, args) = parser.parse_args()
 
 
-def animated_messages(message):
-    spinner = Spinner(f'{message} =>')
-    while DEFAULT_TIMER_STATE == False:
-        spinner.next()
 """
 The function takes a string
 and returns its hash
@@ -164,7 +159,6 @@ The main logic
 def main():
     if options.action in SUPPORTED_ACTIONS:
         if options.action == 'export':
-            DEFAULT_TIMER_STATE = True
 
             crypt_password = getpass('Enter the password for which the password file will be encrypted:')
             check_password = getpass('Confirm the password:')
