@@ -22,13 +22,17 @@ import os
 import ast
 import json
 import base64
+import random
+import shutil
+import string
 import hashlib
+import tempfile
+import pyAesCrypt
 import subprocess
 from pathlib import Path
 from getpass import getpass
 from itertools import islice
 from optparse import OptionParser
-from progress.spinner import Spinner
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
@@ -46,6 +50,11 @@ parser = OptionParser()
 parser.add_option('-a', '--action',
                             dest='action',
                             help='import, export')
+parser.add_option('-f', '--secret_file',
+                            dest='secret_file',
+                            default=OUTPUT_FILE_NAME,
+                            help='path or just name of secret file whre will be saved encrypted passwords')
+                  
 
 (options, args) = parser.parse_args()
 
@@ -87,6 +96,7 @@ a function that encrypts all data received in the data_to_encrypt variable
 and will write it to the secret file from secret_file var
 """
 def encrypt(secret_file, data_to_encrypt, password, salt):
+    bufferSize = 64 * 1024
     fernet_data = Fernet(get_key(password, salt))
     encrypted = fernet_data.encrypt(data_to_encrypt.encode())
 
@@ -94,6 +104,10 @@ def encrypt(secret_file, data_to_encrypt, password, salt):
     with open(secret_file, 'wb+') as f:
         f.write(encrypted)
 
+    random_tmp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(10,40)))
+    tmp_file_path = os.path.join(tempfile.gettempdir(), random_tmp_file_name)
+    pyAesCrypt.encryptFile(secret_file, tmp_file_path, password)
+    shutil.move(tmp_file_path, secret_file)
 """
 secret_file is path to the secret file, 
 this is the file where it will be written encrypted
@@ -107,6 +121,11 @@ with encrypted data and return it in decrypted form
 
 def decrypt(secret_file, password, salt):
     print('Read and decrypt data')
+    random_tmp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(10,40)))
+    tmp_file_path = os.path.join(tempfile.gettempdir(), random_tmp_file_name)
+    pyAesCrypt.decryptFile(secret_file, tmp_file_path, password)
+    shutil.move(tmp_file_path, secret_file)
+
     with open(secret_file, 'r') as f:
         data_from_file = f.read()
 
@@ -156,8 +175,8 @@ def get_all_passwords(ignored_dirs):
 """
 The main logic
 """
-def main():
-    if options.action in SUPPORTED_ACTIONS:
+def main(s_actions, i_dirs, o_file_name):
+    if options.action in s_actions:
         if options.action == 'export':
 
             crypt_password = getpass('Enter the password for which the password file will be encrypted:')
@@ -167,7 +186,7 @@ def main():
                     and crypt_password == check_password:
             
                 print('Getting data from the password manager ... ')
-                encrypt(OUTPUT_FILE_NAME, get_all_passwords(IGNORED_DIRS), crypt_password, hashing(crypt_password))
+                encrypt(o_file_name, get_all_passwords(i_dirs), crypt_password, hashing(crypt_password))
             else:
                 print('Password mismatch')
                 exit(1)
@@ -178,7 +197,7 @@ def main():
 
             if crypt_password:
                 hashing(crypt_password)
-                pass_insert(decrypt(OUTPUT_FILE_NAME, crypt_password, hashing(crypt_password)), IGNORED_DIRS)
+                pass_insert(decrypt(o_file_name, crypt_password, hashing(crypt_password)), i_dirs)
 
         else:
            print('WTF: Internal error')
@@ -188,4 +207,4 @@ def main():
         exit(1)
 
 if __name__ == '__main__':
-    main()
+    main(SUPPORTED_ACTIONS, IGNORED_DIRS, options.secret_file)
