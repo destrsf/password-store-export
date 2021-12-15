@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.9
 """
 Usage:
 
@@ -58,6 +59,18 @@ parser.add_option('-f', '--secret_file',
 
 (options, args) = parser.parse_args()
 
+"""
+aes crypt
+"""
+def py_aes(secret_file, password, salt, action):
+    random_tmp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(10,40)))
+    tmp_file_path = os.path.join(tempfile.gettempdir(), random_tmp_file_name)
+    if action == 'encrypt':
+        pyAesCrypt.encryptFile(secret_file, tmp_file_path, password)
+    elif action == 'decrypt':
+        pyAesCrypt.decryptFile(secret_file, tmp_file_path, password)
+
+    shutil.move(tmp_file_path, secret_file)
 
 """
 The function takes a string
@@ -105,7 +118,7 @@ def encrypt(secret_file, data_to_encrypt, password, salt):
         f.write(encrypted)
 
     py_aes(secret_file, password, salt, 'encrypt')
-    
+
 """
 secret_file is path to the secret file, 
 this is the file where it will be written encrypted
@@ -116,17 +129,6 @@ password is password key
 the function will read everything from a file 
 with encrypted data and return it in decrypted form
 """
-def py_aes(secret_file, password, salt, action):
-    random_tmp_file_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=random.randint(10,40)))
-    tmp_file_path = os.path.join(tempfile.gettempdir(), random_tmp_file_name)
-    if action == 'encrypt':
-        pyAesCrypt.encryptFile(secret_file, tmp_file_path, password)
-    elif action == 'decrypt':
-        pyAesCrypt.decryptFile(secret_file, tmp_file_path, password)
-
-    shutil.move(tmp_file_path, secret_file)
-    
-
 def decrypt(secret_file, password, salt):
     print('Read and decrypt data')
     py_aes(secret_file, password, salt, 'decrypt')
